@@ -226,7 +226,7 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Input", "Output", "Hidden", "Hidden Context"}
+	ss.LayStatNms = []string{"Input", "Output", "Hidden"}
    ss.HiddenReps.Init()
 }
 
@@ -331,7 +331,6 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	// Please insert the additional code directly below inp.
 	inp := net.AddLayer2D("Input", 1, 6, emer.Input)
 	hid := net.AddLayer2D("Hidden", 6, 5, emer.Hidden)
-	hidcontext := net.AddLayer2D("Hidden Context", 6, 5, emer.Hidden)
 	out := net.AddLayer2D("Output", 1, 6, emer.Target)
 	//
 	// ****************************************************************************
@@ -369,7 +368,6 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	// the connections we've just described.
 	//
 	net.ConnectLayers(inp, hid, prjn.NewFull(), emer.Forward)
-	net.ConnectLayers(hidcontext, hid, prjn.NewFull(), emer.Forward)
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	//
 	// Once you've done this. Please proceed to Section 1b (by searching this file.)
@@ -453,15 +451,6 @@ func (ss *Sim) AlphaCyc(train bool) {
 
 	// **********************************
 	// Insert context-layer code snippet from the README here:
-	context_in := ss.Net.LayerByName("Hidden").(*leabra.Layer)
-	context_out := ss.Net.LayerByName("Hidden Context").(*leabra.Layer)
-
-	context_in.UnitVals(&ss.TmpVals1, "Act")
-	context_out.UnitVals(&ss.TmpVals2, "Act")
-	for i,_ := range ss.TmpVals1 {
-   	   ss.TmpVals1[i] = ss.TmpVals1[i] * ss.FmHid + ss.TmpVals2[i] * ss.FmPrv
-	}
-	context_out.ApplyExt1D32(ss.TmpVals1)
 	// **********************************
 
 	viewUpdt := ss.TrainUpdt
