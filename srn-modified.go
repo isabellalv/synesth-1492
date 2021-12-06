@@ -226,7 +226,7 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Input", "Output", "Hidden"}
+	ss.LayStatNms = []string{"Input", "Output", "Hidden", "Hidden 2" , "Output 2"}
    ss.HiddenReps.Init()
 }
 
@@ -332,6 +332,8 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	inp := net.AddLayer2D("Input", 1, 6, emer.Input)
 	hid := net.AddLayer2D("Hidden", 6, 5, emer.Hidden)
 	out := net.AddLayer2D("Output", 1, 6, emer.Target)
+	hid2 := net.AddLayer2D("Hidden 2", 6, 5, emer.Hidden)
+	out2 := net.AddLayer2D("Output 2", 1, 6, emer.Target)
 	//
 	// ****************************************************************************
 
@@ -368,7 +370,9 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	// the connections we've just described.
 	//
 	net.ConnectLayers(inp, hid, prjn.NewFull(), emer.Forward)
+	net.ConnectLayers(inp, hid2, prjn.NewFull(), emer.Forward)
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
+	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
 	//
 	// Once you've done this. Please proceed to Section 1b (by searching this file.)
 	// ****************************************************************************
