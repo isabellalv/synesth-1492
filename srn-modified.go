@@ -18,6 +18,7 @@ import (
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/netview"
 	"github.com/emer/emergent/params"
+	"github.com/emer/emergent/relpos"
    "github.com/emer/etable/clust"
    "github.com/emer/etable/simat"
    "github.com/emer/etable/metric"
@@ -226,7 +227,7 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Input", "Output", "Hidden", "Hidden 2" , "Output 2"}
+	ss.LayStatNms = []string{"Sensory Input", "Letter Hidden", "Letter Output", "Color Hidden" , "Color Output"}
    ss.HiddenReps.Init()
 }
 
@@ -329,11 +330,11 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	//         Its type should be emer.Hidden.
 	//
 	// Please insert the additional code directly below inp.
-	inp := net.AddLayer2D("Input", 1, 6, emer.Input)
-	hid := net.AddLayer2D("Hidden", 6, 5, emer.Hidden)
-	out := net.AddLayer2D("Output", 1, 6, emer.Target)
-	hid2 := net.AddLayer2D("Hidden 2", 6, 5, emer.Hidden)
-	out2 := net.AddLayer2D("Output 2", 1, 6, emer.Target)
+	inp := net.AddLayer2D("Sensory Input", 1, 6, emer.Input)
+	hid := net.AddLayer2D("Letter Hidden", 6, 5, emer.Hidden)
+	out := net.AddLayer2D("Letter Output", 1, 6, emer.Target)
+	hid2 := net.AddLayer2D("Color Hidden", 6, 5, emer.Hidden)
+	out2 := net.AddLayer2D("Color Output", 1, 6, emer.Target)
 	//
 	// ****************************************************************************
 
@@ -373,6 +374,11 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.ConnectLayers(inp, hid2, prjn.NewFull(), emer.Forward)
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
+
+
+	hid2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
+	out2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 2})
+
 	//
 	// Once you've done this. Please proceed to Section 1b (by searching this file.)
 	// ****************************************************************************
@@ -1042,9 +1048,9 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 	// a local copy of the new hidden layer as well. This is set up here for you,
 	// so you can just uncomment the second line below:
 	//
-	inp := ss.Net.LayerByName("Input").(*leabra.Layer)
-	hid := ss.Net.LayerByName("Hidden").(*leabra.Layer)
-	out := ss.Net.LayerByName("Output").(*leabra.Layer)
+	inp := ss.Net.LayerByName("Sensory Input").(*leabra.Layer)
+	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
+	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	//
 	// ****************************************************************************
 
@@ -1092,9 +1098,9 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	// This is exactly like step 1, but now we're in the logging function itself
 	// rather than setting up the data table. Create a 'hid' copy below.
 	//
-	inp := ss.Net.LayerByName("Input").(*leabra.Layer)
-	hid := ss.Net.LayerByName("Hidden").(*leabra.Layer)
-	out := ss.Net.LayerByName("Output").(*leabra.Layer)
+	inp := ss.Net.LayerByName("Sensory Input").(*leabra.Layer)
+	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
+	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	//
 	// ****************************************************************************
 
