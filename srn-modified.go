@@ -330,7 +330,7 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	//         Its type should be emer.Hidden.
 	//
 	// Please insert the additional code directly below inp.
-	inp := net.AddLayer2D("Sensory Input", 1, 6, emer.Input)
+	inp := net.AddLayer2D("Sensory Input", 1, 12, emer.Input)
 	hid := net.AddLayer2D("Letter Hidden", 6, 5, emer.Hidden)
 	out := net.AddLayer2D("Letter Output", 1, 6, emer.Target)
 	hid2 := net.AddLayer2D("Color Hidden", 6, 5, emer.Hidden)
