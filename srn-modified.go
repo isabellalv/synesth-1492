@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 // Please see the associated README.md file for a description of this project.
-// this is the test 
 package main
 
 import (
@@ -14,29 +13,30 @@ import (
 	"os"
 	"strconv"
 	"time"
-  _"gonum.org/v1/gonum/mat"
+
 	"github.com/emer/emergent/emer"
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/netview"
 	"github.com/emer/emergent/params"
-	"github.com/emer/emergent/relpos"
-   "github.com/emer/etable/clust"
-   "github.com/emer/etable/simat"
-   "github.com/emer/etable/metric"
 	"github.com/emer/emergent/prjn"
+	"github.com/emer/emergent/relpos"
 	"github.com/emer/etable/agg"
+	"github.com/emer/etable/clust"
 	"github.com/emer/etable/eplot"
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
 	_ "github.com/emer/etable/etview" // include to get gui views
+	"github.com/emer/etable/metric"
+	"github.com/emer/etable/simat"
 	"github.com/emer/etable/split"
 	"github.com/emer/leabra/leabra"
 	"github.com/goki/gi/gi"
 	"github.com/goki/gi/gimain"
 	"github.com/goki/gi/giv"
-	"github.com/goki/mat32"
 	"github.com/goki/ki/ki"
 	"github.com/goki/ki/kit"
+	"github.com/goki/mat32"
+	_ "gonum.org/v1/gonum/mat"
 )
 
 // this is the stub main for gogi that calls our actual mainrun function, at end of file
@@ -186,8 +186,7 @@ type Sim struct {
 	NeedsNewRun   bool             `view:"-" desc:"flag to initialize NewRun if last one finished"`
 	RndSeed       int64            `view:"-" desc:"the current random seed"`
 	TmpVals1      []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
-   TmpVals2      []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
-
+	TmpVals2      []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
 }
 
 // this registers this Sim Type and gives it properties that e.g.,
@@ -200,9 +199,9 @@ var TheSim Sim
 // New creates new blank elements and initializes defaults
 func (ss *Sim) New() {
 
-   // -----------------------------------
+	// -----------------------------------
 	// Note: When you uncomment these, they become available in
-	// the control panel. For future reference, this is true in 
+	// the control panel. For future reference, this is true in
 	// general of items such as parameters which you might like
 	// to put in the control panel.
 	//
@@ -210,10 +209,10 @@ func (ss *Sim) New() {
 	// the ParamSet field in the control panel can also be used
 	// to modify parameters. These will be reset when Init is
 	// called from within the GUI however!
-	// 
+	//
 	ss.FmHid = 1
 	ss.FmPrv = 0
-   // -----------------------------------
+	// -----------------------------------
 	ss.Net = &leabra.Network{}
 	ss.Pats = &etable.Table{}
 	ss.TrnEpcLog = &etable.Table{}
@@ -228,8 +227,8 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Sensory Input", "Letter Hidden", "Letter Output", "Color Hidden" , "Color Output"}
-   ss.HiddenReps.Init()
+	ss.LayStatNms = []string{"Sensory Input", "Letter Hidden", "Letter Output", "Color Hidden", "Color Output"}
+	ss.HiddenReps.Init()
 }
 
 // ****************************************************************************
@@ -260,10 +259,8 @@ func (ss *Sim) New() {
 // When you're done, you should return to the instructions in the README.
 // ****************************************************************************
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////
 // 		Configs
-
 
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
@@ -284,7 +281,7 @@ func (ss *Sim) ConfigEnv() {
 	}
 	if ss.MaxEpcs == 0 { // allow user override
 		ss.MaxEpcs = 50
-		ss.NZeroStop = 30	  // num. of times the network should perform perfectly before we say task is learned
+		ss.NZeroStop = 30 // num. of times the network should perform perfectly before we say task is learned
 	}
 
 	ss.TrainEnv.Nm = "TrainEnv"
@@ -339,7 +336,6 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	//
 	// ****************************************************************************
 
-
 	// ****************************************************************************
 	// STEP 2: Now that a hidden layer exists, put it in the list of layers.
 	//
@@ -351,7 +347,6 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	//
 	// after you've changed it.
 	// ****************************************************************************
-
 
 	// ****************************************************************************
 	// STEP 3:
@@ -376,14 +371,12 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
 
-
 	hid2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
 	out2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 2})
 
 	//
 	// Once you've done this. Please proceed to Section 1b (by searching this file.)
 	// ****************************************************************************
-
 
 	// note: see emergent/prjn module for all the options on how to connect
 	// note: can set these to do parallel threaded computation across multiple cpus
@@ -530,7 +523,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Input","Output"}
+	lays := []string{"Input", "Output"}
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(*leabra.Layer)
 		pats := en.State(ly.Nm)
@@ -572,11 +565,8 @@ func (ss *Sim) TrainTrial() {
 		}
 	}
 
-
 	ss.ApplyInputs(&ss.TrainEnv)
-	ss.AlphaCyc(true)   // train
-
-
+	ss.AlphaCyc(true) // train
 
 	ss.TrialStats(true) // accumulate
 }
@@ -711,7 +701,6 @@ func (ss *Sim) SaveWeights(filename gi.FileName) {
 	ss.Net.SaveWtsJSON(filename)
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Testing
 //
@@ -734,7 +723,7 @@ func (ss *Sim) TestTrial(returnOnChg bool) {
 	}
 
 	ss.ApplyInputs(&ss.TestEnv)
-	ss.AlphaCyc(false)   // !train
+	ss.AlphaCyc(false) // !train
 
 	ss.TrialStats(false) // !accumulate
 	ss.LogTstTrl(ss.TstTrlLog)
@@ -747,7 +736,7 @@ func (ss *Sim) TestItem(idx int) {
 	ss.TestEnv.SetTrialName()
 
 	ss.ApplyInputs(&ss.TestEnv)
-	ss.AlphaCyc(false)   // !train
+	ss.AlphaCyc(false) // !train
 
 	ss.TrialStats(false) // !accumulate
 	ss.TestEnv.Trial.Cur = cur
@@ -858,9 +847,9 @@ func (ss *Sim) SetParamsSet(setNm string, sheet string, setMsg bool) error {
 // properly with spaces.
 //
 // 2) There's a bug in the program currently which causes the software to "see" the
-// number of test inputs as a less than or equal to the number of lines in the 
+// number of test inputs as a less than or equal to the number of lines in the
 // training environment, i.e. l.t.e. the number of lines in the file you edited.
-// If you create training data with more than 6 items in it, you'll have to edit 
+// If you create training data with more than 6 items in it, you'll have to edit
 // the "empty.dat" input below rather than just selecting it in the GUI.
 //
 // Once you've done this, replace "empty.dat" with "zeroth-order.dat" in the OpenCSV
@@ -874,16 +863,15 @@ func (ss *Sim) OpenPats() {
 		log.Println(err)
 	}
 }
+
 //
 // This is the end of section 1b. Please continue to section 1c.
 // ****************************************************************************
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // 		Logging
 //
 // Like book-keeping, not flannel.
-
 
 // RunName returns a name for this run that combines Tag and Params -- add this to
 // any file names that are saved.
@@ -970,7 +958,7 @@ func (ss *Sim) LogTrnEpcBlank(dt *etable.Table) {
 	row := dt.Rows
 	dt.SetNumRows(row + 1)
 
-	epc := ss.TrainEnv.Epoch.Prv           // this is triggered by increment so use previous value
+	epc := ss.TrainEnv.Epoch.Prv // this is triggered by increment so use previous value
 
 	dt.SetCellFloat("Run", row, float64(ss.TrainEnv.Run.Cur))
 	dt.SetCellFloat("Epoch", row, float64(0))
@@ -1020,7 +1008,7 @@ func (ss *Sim) ConfigTrnEpcPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 	plt.SetColParams("Epoch", false, true, 0, false, 0)
 	plt.SetColParams("SSE", false, true, 0, false, 0)
 	plt.SetColParams("AvgSSE", false, true, 0, false, 0)
-	plt.SetColParams("PctErr", true, true, 0, true, 1) // default plot
+	plt.SetColParams("PctErr", true, true, 0, true, 1)  // default plot
 	plt.SetColParams("PctCor", false, true, 0, true, 1) // default plot
 	plt.SetColParams("CosDiff", false, true, 0, true, 1)
 
@@ -1081,7 +1069,7 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 		// ****************************************************************************
 		// Step 2: Now we want to create a spot in our data table for the information
 		// from the hidden layer. To do so, uncomment the following line:
-		// 
+		//
 		{"HidActM", etensor.FLOAT64, hid.Shp.Shp, nil},
 		// ****************************************************************************
 	}...)
@@ -1148,12 +1136,12 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	// Now we copy the lines below and modify the arguments. We've done so for line 1,
 	// which you should uncomment. Then copy line 2 and modify the arguments from
 	// "OutActM" to "HidActM", and from OutputValsTsr to HiddenValsTsr.
-	out.UnitValsTensor(ss.OutputValsTsr, "ActM")				// Line 1
-	dt.SetCellTensor("OutActM", row, ss.OutputValsTsr)		// Line 2
+	out.UnitValsTensor(ss.OutputValsTsr, "ActM")       // Line 1
+	dt.SetCellTensor("OutActM", row, ss.OutputValsTsr) // Line 2
 	// Put modified copies here:
 	//
-	hid.UnitValsTensor(ss.HiddenValsTsr, "ActM")	// Modified copy of line 1
-	dt.SetCellTensor("HidActM", row, ss.HiddenValsTsr)		
+	hid.UnitValsTensor(ss.HiddenValsTsr, "ActM") // Modified copy of line 1
+	dt.SetCellTensor("HidActM", row, ss.HiddenValsTsr)
 	//
 	// From here you should go to section 1d, where we set up our plot.
 	// ****************************************************************************
@@ -1313,6 +1301,7 @@ func (ss *Sim) ConfigTstCycPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 	}
 	return plt
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Cluster plot
 //
@@ -1492,7 +1481,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	// Here we'll add a tab to display a plot, and call the function which sets up
 	// that plot, telling it to use the tab we just created. Uncomment the following:
 	//
- 	plt := tv.AddNewTab(eplot.KiT_Plot2D, "TrnEpcPlot").(*eplot.Plot2D)
+	plt := tv.AddNewTab(eplot.KiT_Plot2D, "TrnEpcPlot").(*eplot.Plot2D)
 	ss.TrnEpcPlot = ss.ConfigTrnEpcPlot(plt, ss.TrnEpcLog)
 	//
 	// Can you determine how the ConfigTrnEpcPlot function knows what data to keep
@@ -1630,14 +1619,14 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	// Insert code for a RepAnalysis using an 'AddAction'  here:
 
 	tbar.AddAction(gi.ActOpts{Label: "Reps Analysis", Icon: "fast-fwd", Tooltip: "Does an All Test All and analyzes the resulting Hidden and AgentCode activations.", UpdateFunc: func(act *gi.Action) {
-     act.SetActiveStateUpdt(!ss.IsRunning)
-   }}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-     if !ss.IsRunning {
-        ss.IsRunning = true
-        tbar.UpdateActions()
-        go ss.RepsAnalysis()
-     }
-   })
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		if !ss.IsRunning {
+			ss.IsRunning = true
+			tbar.UpdateActions()
+			go ss.RepsAnalysis()
+		}
+	})
 
 	//***************************
 
