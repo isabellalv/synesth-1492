@@ -72,6 +72,18 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "1.4",
 				}},
+			{Sel: ".HidToHid2", Desc: "Color Hidden to Letter Hidden", //ADDED: WtScale from hid to hid2
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
+			{Sel: ".OutToAssoc", Desc: "Color Output to Associator", //ADDED: WtScale from out to associator
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
+			{Sel: ".Out2ToConverge", Desc: "Letter Output to Associator", //ADDED: WtScale from out2 to associator
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
 		},
 		"Sim": &params.Sheet{ // sim params apply to sim object
 			{Sel: "Sim", Desc: "best params always finish in this time",
@@ -119,6 +131,9 @@ var ParamSets = params.Sets{
 // as arguments to methods, and provides the core GUI interface (note the view tags
 // for the fields which provide hints to how things should be displayed).
 type Sim struct {
+	HidToHid2    float32           `def:"0" desc:"Between Letter Hidden and Color Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	OutToAssoc   float32           `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` //ADDED
+	Out2ToAssoc  float32           `def:"0" desc:"Between Color Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  //ADDED
 	Net          *leabra.Network   `view:"no-inline" desc:"the network -- click to view / edit parameters for layers, prjns, etc"`
 	Pats         *etable.Table     `view:"no-inline" desc:"the training patterns to use"`
 	TrnEpcLog    *etable.Table     `view:"no-inline" desc:"training epoch-level log data"`
@@ -210,9 +225,10 @@ func (ss *Sim) New() {
 	// to modify parameters. These will be reset when Init is
 	// called from within the GUI however!
 	//
-	ss.FmHid = 1
-	ss.FmPrv = 0
+	//ss.FmHid = 1
+	//ss.FmPrv = 0
 	// -----------------------------------
+	ss.Defaults() //ADDED
 	ss.Net = &leabra.Network{}
 	ss.Pats = &etable.Table{}
 	ss.TrnEpcLog = &etable.Table{}
@@ -227,8 +243,17 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Sensory Input", "Letter Hidden", "Letter Output", "Color Hidden", "Color Output"}
+	ss.LayStatNms = []string{"Letter Input", "Color Input", "Letter Hidden", "Letter Output", "Color Hidden", "Color Output", "Associator Layer"}
 	ss.HiddenReps.Init()
+	ss.Defaults() //ADDED
+
+}
+
+// Defaults sets default params (ADDED)
+func (ss *Sim) Defaults() {
+	ss.HidToHid2 = 0
+	ss.OutToAssoc = 0
+	ss.Out2ToAssoc = 0
 }
 
 // ****************************************************************************
@@ -328,11 +353,13 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	//         Its type should be emer.Hidden.
 	//
 	// Please insert the additional code directly below inp.
-	inp := net.AddLayer2D("Sensory Input", 1, 12, emer.Input)
+	inp := net.AddLayer2D("Letter Input", 5, 7, emer.Input) // changed to grid
+	inp2 := net.AddLayer2D("Color Input", 5, 7, emer.Input) //ADDED + changed to grid
 	hid := net.AddLayer2D("Letter Hidden", 6, 5, emer.Hidden)
-	out := net.AddLayer2D("Letter Output", 1, 6, emer.Target)
+	out := net.AddLayer2D("Letter Output", 5, 2, emer.Target)
 	hid2 := net.AddLayer2D("Color Hidden", 6, 5, emer.Hidden)
-	out2 := net.AddLayer2D("Color Output", 1, 6, emer.Target)
+	out2 := net.AddLayer2D("Color Output", 5, 2, emer.Target)
+	assoc := net.AddLayer2D("Associator Layer", 4, 4, emer.Hidden) //ADDED
 	//
 	// ****************************************************************************
 
@@ -370,9 +397,14 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.ConnectLayers(inp, hid2, prjn.NewFull(), emer.Forward)
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
+	net.BidirConnectLayers(hid, hid2, prjn.NewFull())
+	net.BidirConnectLayers(out, assoc, prjn.NewFull())  //Color Output to Converging "Associator Layer"
+	net.BidirConnectLayers(out2, assoc, prjn.NewFull()) //Letter Output to Converging "Associator Layer"
 
+	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 2}) //new positioning
 	hid2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
 	out2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 2})
+	assoc.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Output", YAlign: relpos.Front, Space: 2}) //new positioning
 
 	//
 	// Once you've done this. Please proceed to Section 1b (by searching this file.)
@@ -523,7 +555,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Input", "Output"}
+	lays := []string{"Letter Input", "Color Input", "Letter Output", "Color Output"} //CHANGED
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(*leabra.Layer)
 		pats := en.State(ly.Nm)
@@ -761,6 +793,8 @@ func (ss *Sim) RunTestAll() {
 	ss.Stopped()
 }
 
+//This is where we can put the LogTstTrl stuff
+
 /////////////////////////////////////////////////////////////////////////
 //   Params setting
 
@@ -769,6 +803,16 @@ func (ss *Sim) ParamsName() string {
 	if ss.ParamSet == "" {
 		return "Base"
 	}
+
+	xact := ss.Params.SetByName("Base").SheetByName("Network").SelByName(".HidToHid2")
+	xact.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.HidToHid2))
+
+	colAssoc := ss.Params.SetByName("Base").SheetByName("Network").SelByName("OutToAssoc")
+	colAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.OutToAssoc))
+
+	letAssoc := ss.Params.SetByName("Base").SheetByName("Network").SelByName("Out2ToAssoc")
+	letAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Out2ToAssoc))
+
 	return ss.ParamSet
 }
 
@@ -1037,7 +1081,8 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 	// a local copy of the new hidden layer as well. This is set up here for you,
 	// so you can just uncomment the second line below:
 	//
-	inp := ss.Net.LayerByName("Sensory Input").(*leabra.Layer)
+	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
+	//inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) // ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	//
@@ -1087,7 +1132,8 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	// This is exactly like step 1, but now we're in the logging function itself
 	// rather than setting up the data table. Create a 'hid' copy below.
 	//
-	inp := ss.Net.LayerByName("Sensory Input").(*leabra.Layer)
+	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
+	//inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) //ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	//
