@@ -902,7 +902,7 @@ func (ss *Sim) OpenPats() {
 	dt := ss.Pats
 	dt.SetMetaData("name", "TrainPats")
 	dt.SetMetaData("desc", "Training patterns")
-	err := dt.OpenCSV("zeroth-order.dat", etable.Tab)
+	err := dt.OpenCSV("Congruent_Training.dat", etable.Tab)
 	if err != nil {
 		log.Println(err)
 	}
