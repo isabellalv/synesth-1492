@@ -19,7 +19,7 @@ import (
 	"github.com/emer/emergent/netview"
 	"github.com/emer/emergent/params"
 	"github.com/emer/emergent/prjn"
-	"github.com/emer/emergent/relpos"
+	"github.com/emer/emergent/relpos" //include to get layer positioning 
 	"github.com/emer/etable/agg"
 	"github.com/emer/etable/clust"
 	"github.com/emer/etable/eplot"
@@ -189,10 +189,14 @@ type Sim struct {
 	TstCycPlot    *eplot.Plot2D    `view:"-" desc:"the test-cycle plot"`
 	RunPlot       *eplot.Plot2D    `view:"-" desc:"the run plot"`
 	TrnEpcFile    *os.File         `view:"-" desc:"log file"`
+	TstTrlFile    *os.File         `view:"-" desc:"log file"`
 	RunFile       *os.File         `view:"-" desc:"log file"`
 	InputValsTsr  *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	OutputValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	HiddenValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
+	Input2ValsTsr  *etensor.Float32 `view:"-" desc:"for holding layer values"`
+	Output2ValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
+	Hidden2ValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	SaveWts       bool             `view:"-" desc:"for command-line run only, auto-save final weights after each run"`
 	NoGui         bool             `view:"-" desc:"if true, runing in no GUI mode"`
 	LogSetParams  bool             `view:"-" desc:"if true, print message for all params that are set"`
@@ -558,7 +562,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Letter Input", "Color Input", "Letter Output", "Color Output"} //CHANGED
+	lays := []string{"Letter Input", "Color Input", "Letter Output", "Color Output"} //ADDED NEw LAYERS
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(*leabra.Layer)
 		pats := en.State(ly.Nm)
@@ -1076,20 +1080,22 @@ func (ss *Sim) ConfigTrnEpcPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 // ****************************************************************************
 func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 
-	// ****************************************************************************
-	// Step 1: Copy the data from the new layer
-	//
-	// The line below creates a local variable with the data from the input layer.
-	// We want to keep track of data from our new 'hid' layer. To do so, we create
-	// a local copy of the new hidden layer as well. This is set up here for you,
-	// so you can just uncomment the second line below:
-	//
+// 	// ****************************************************************************
+// 	// Step 1: Copy the data from the new layer
+// 	//
+// 	// The line below creates a local variable with the data from the input layer.
+// 	// We want to keep track of data from our new 'hid' layer. To do so, we create
+// 	// a local copy of the new hidden layer as well. This is set up here for you,
+// 	// so you can just uncomment the second line below:
+// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
-	//inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) // ADDED
+	inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) // ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
+	hid2 := ss.Net.LayerByName("Color Hidden").(*leabra.Layer) //ADDED
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
-	//
-	// ****************************************************************************
+	out2 := ss.Net.LayerByName("Color Output").(*leabra.Layer)
+// 	//
+// 	// ****************************************************************************
 
 	dt.SetMetaData("name", "TstTrlLog")
 	dt.SetMetaData("desc", "Record of testing per input pattern")
@@ -1118,29 +1124,38 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 		// Step 2: Now we want to create a spot in our data table for the information
 		// from the hidden layer. To do so, uncomment the following line:
 		//
+		{"In2Act", etensor.FLOAT64, inp2.Shp.Shp, nil},
 		{"HidActM", etensor.FLOAT64, hid.Shp.Shp, nil},
+		{"HidActP", etensor.FLOAT64, hid.Shp.Shp, nil},
+		{"Hid2ActM", etensor.FLOAT64, hid2.Shp.Shp, nil},
+		{"Hid2ActP", etensor.FLOAT64, hid2.Shp.Shp, nil},
+		{"Out2ActM", etensor.FLOAT64, out2.Shp.Shp, nil},
+		{"Out2ActP", etensor.FLOAT64, out2.Shp.Shp, nil},
 		// ****************************************************************************
 	}...)
 	dt.SetFromSchema(sch, nt)
 }
+
 
 // LogTstTrl adds data from current trial to the TstTrlLog table.
 // log always contains number of testing items
 func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	epc := ss.TrainEnv.Epoch.Prv // this is triggered by increment so use previous value
 
-	// ****************************************************************************
-	// Step 3: Copy the new layers again...
-	//
-	// This is exactly like step 1, but now we're in the logging function itself
-	// rather than setting up the data table. Create a 'hid' copy below.
-	//
+// 	// ****************************************************************************
+// 	// Step 3: Copy the new layers again...
+// 	//
+// 	// This is exactly like step 1, but now we're in the logging function itself
+// 	// rather than setting up the data table. Create a 'hid' copy below.
+// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
-	//inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) //ADDED
+	inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) //ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
-	//
-	// ****************************************************************************
+	hid2 := ss.Net.LayerByName("Color Hidden").(*leabra.Layer) //ADDED
+	out2 := ss.Net.LayerByName("Color Output").(*leabra.Layer) //ADDED
+// 	//
+// 	// ****************************************************************************
 
 	trl := ss.TestEnv.Trial.Cur
 	row := trl
@@ -1168,19 +1183,28 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	}
 	if ss.InputValsTsr == nil { // re-use same tensors so not always reallocating mem
 		ss.InputValsTsr = &etensor.Float32{}
-
-		// Insert the following below ss.OutputValTsr:
-		//
-		// ss.HiddenValsTsr = &etensor.Float32{}
+		ss.HiddenValsTsr = &etensor.Float32{}
 		ss.OutputValsTsr = &etensor.Float32{}
 		ss.HiddenValsTsr = &etensor.Float32{}
-		//
+		ss.Input2ValsTsr = &etensor.Float32{} //added layer data for new layers 
+		ss.Hidden2ValsTsr = &etensor.Float32{} 
+		ss.Output2ValsTsr = &etensor.Float32{}
+		ss.Hidden2ValsTsr = &etensor.Float32{}
 	}
 	inp.UnitValsTensor(ss.InputValsTsr, "Act")
 	dt.SetCellTensor("InAct", row, ss.InputValsTsr)
 
 	out.UnitValsTensor(ss.OutputValsTsr, "ActP")
 	dt.SetCellTensor("OutActP", row, ss.OutputValsTsr)
+
+	inp2.UnitValsTensor(ss.Input2ValsTsr, "Act") //input 2
+	dt.SetCellTensor("In2Act", row, ss.Input2ValsTsr)
+
+	out2.UnitValsTensor(ss.Output2ValsTsr, "ActP") //output 2 plus
+	dt.SetCellTensor("Out2ActP", row, ss.Output2ValsTsr)
+
+	out2.UnitValsTensor(ss.Output2ValsTsr, "ActM") //output 2 minus
+	dt.SetCellTensor("Out2ActM", row, ss.Output2ValsTsr)
 
 	// Now we copy the lines below and modify the arguments. We've done so for line 1,
 	// which you should uncomment. Then copy line 2 and modify the arguments from
@@ -1191,34 +1215,68 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	//
 	hid.UnitValsTensor(ss.HiddenValsTsr, "ActM") // Modified copy of line 1
 	dt.SetCellTensor("HidActM", row, ss.HiddenValsTsr)
-	//
+
+	hid2.UnitValsTensor(ss.Hidden2ValsTsr, "ActM") // hidden 2 minus 
+	dt.SetCellTensor("Hid2ActM", row, ss.Hidden2ValsTsr)
+												// not sure if we should add a plus phase for hidden 2 
 	// From here you should go to section 1d, where we set up our plot.
 	// ****************************************************************************
 
 	// note: essential to use Go version of update when called from another goroutine
 	ss.TstTrlPlot.GoUpdate()
+	if ss.TstTrlFile != nil {
+		if ss.TrainEnv.Run.Cur == 0 && epc == 0 {
+			dt.WriteCSVHeaders(ss.TstTrlFile, etable.Tab)
+		}
+		dt.WriteCSVRow(ss.TstTrlFile, row, etable.Tab)
+	}
 }
 
+func (ss *Sim) TstTrlBlank(dt *etable.Table) {
+	row := dt.Rows
+	dt.SetNumRows(row + 1)
+
+	epc := ss.TrainEnv.Epoch.Prv // this is triggered by increment so use previous value
+
+	dt.SetCellFloat("Run", row, float64(ss.TrainEnv.Run.Cur))
+	dt.SetCellFloat("Epoch", row, float64(0))
+	dt.SetCellFloat("SSE", row, float64(0))
+	dt.SetCellFloat("AvgSSE", row, float64(0))
+	dt.SetCellFloat("PctErr", row, float64(0))
+	dt.SetCellFloat("PctCor", row, float64(0))
+	dt.SetCellFloat("CosDiff", row, float64(0))
+
+	// note: essential to use Go version of update when called from another goroutine
+	ss.TstTrlPlot.GoUpdate()
+	if ss.TstTrlFile != nil {
+		if ss.TrainEnv.Run.Cur == 0 && epc == 0 {
+			dt.WriteCSVHeaders(ss.TstTrlFile, etable.Tab)
+		}
+		dt.WriteCSVRow(ss.TstTrlFile, row, etable.Tab)
+	}
+}
+
+
 func (ss *Sim) ConfigTstTrlPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot2D {
-	plt.Params.Title = "Leabra Simple Recurrent Network 25 Test Trial Plot"
-	plt.Params.XAxisCol = "Trial"
+	plt.Params.Title = "Synesthesia Stroop Task Test Trial Plot"
+	plt.Params.XAxisCol = "Epoch"
 	plt.SetTable(dt)
 	// order of params: on, fixMin, min, fixMax, max
 	plt.SetColParams("Run", false, true, 0, false, 0)
 	plt.SetColParams("Epoch", false, true, 0, false, 0)
-	plt.SetColParams("Trial", false, true, 0, false, 0)
-	plt.SetColParams("TrialName", false, true, 0, false, 0)
 	plt.SetColParams("SSE", false, true, 0, false, 0)
-	plt.SetColParams("AvgSSE", true, true, 0, false, 0)
-	plt.SetColParams("CosDiff", true, true, 0, true, 1)
+	plt.SetColParams("AvgSSE", false, true, 0, false, 0)
+	plt.SetColParams("PctErr", true, true, 0, true, 1)  // default plot
+	plt.SetColParams("PctCor", false, true, 0, true, 1) // default plot
+	plt.SetColParams("CosDiff", false, true, 0, true, 1)
 
 	for _, lnm := range ss.LayStatNms {
-		plt.SetColParams(lnm+" ActM.Avg", false, true, 0, true, .5)
+		plt.SetColParams(lnm+" ActAvg", false, true, 0, true, .5)
+		plt.SetColParams("OutActM", false, true, 0, true, 1)
+		plt.SetColParams("OutActP", false, true, 0, true, 1)
+		plt.SetColParams("Out2ActM", false, true, 0, true, 1)
+		plt.SetColParams("Out2ActP", false, true, 0, true, 1) //may need to add more for diff layers 
 	}
-
-	plt.SetColParams("InAct", false, true, 0, true, 1)
-	//plt.SetColParams("OutActM", false, true, 0, true, 1)
-	//plt.SetColParams("OutActP", false, true, 0, true, 1)
 	return plt
 }
 
@@ -1532,7 +1590,10 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	//
 	plt := tv.AddNewTab(eplot.KiT_Plot2D, "TrnEpcPlot").(*eplot.Plot2D)
 	ss.TrnEpcPlot = ss.ConfigTrnEpcPlot(plt, ss.TrnEpcLog)
-	//
+	
+	plt3 := tv.AddNewTab(eplot.KiT_Plot2D, "TstTrlPlot").(*eplot.Plot2D)
+	ss.TstTrlPlot = ss.ConfigTstTrlPlot(plt3, ss.TstTrlLog)
+
 	// Can you determine how the ConfigTrnEpcPlot function knows what data to keep
 	// track of? You should look through the function to see if you can find out.
 	//
@@ -1771,6 +1832,7 @@ func (ss *Sim) CmdArgs() {
 	var nogui bool
 	var saveEpcLog bool
 	var saveRunLog bool
+	var saveTstTrlLog bool
 	flag.StringVar(&ss.ParamSet, "params", "", "ParamSet name to use -- must be valid name as listed in compiled-in params or loaded params")
 	flag.StringVar(&ss.Tag, "tag", "", "extra tag to add to file names saved from this run")
 	flag.IntVar(&ss.MaxRuns, "runs", 1, "number of runs to do (note that MaxEpcs is in paramset)")
@@ -1808,6 +1870,18 @@ func (ss *Sim) CmdArgs() {
 		} else {
 			fmt.Printf("Saving run log to: %v\n", fnm)
 			defer ss.RunFile.Close()
+		}
+	}
+	if saveTstTrlLog {
+		var err error
+		fnm := ss.LogFileName("tst")
+		ss.TstTrlFile, err = os.Create(fnm)
+		if err != nil {
+			log.Println(err)
+			ss.TstTrlFile = nil
+		} else {
+			fmt.Printf("Saving tsttrl log to: %v\n", fnm)
+			defer ss.TstTrlFile.Close()
 		}
 	}
 	if ss.SaveWts {
