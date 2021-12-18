@@ -80,7 +80,7 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".Out2ToConverge", Desc: "Letter Output to Associator", //ADDED: WtScale from out2 to associator
+			{Sel: ".Out2ToAssoc", Desc: "Letter Output to Associator", //ADDED: WtScale from out2 to associator
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
@@ -394,17 +394,20 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	// the connections we've just described.
 	//
 	net.ConnectLayers(inp, hid, prjn.NewFull(), emer.Forward)
-	net.ConnectLayers(inp, hid2, prjn.NewFull(), emer.Forward)
+	net.ConnectLayers(inp2, hid2, prjn.NewFull(), emer.Forward)
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
 	net.BidirConnectLayers(hid, hid2, prjn.NewFull())
 	net.BidirConnectLayers(out, assoc, prjn.NewFull())  //Color Output to Converging "Associator Layer"
 	net.BidirConnectLayers(out2, assoc, prjn.NewFull()) //Letter Output to Converging "Associator Layer"
 
-	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 2}) //new positioning
-	hid2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
-	out2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 2})
-	assoc.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Output", YAlign: relpos.Front, Space: 2}) //new positioning
+	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 2})
+	hid.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Input", YAlign: relpos.Front, Space: 2})
+	hid2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 4})
+	out.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
+	out2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 7})
+	assoc.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Output", YAlign: relpos.Front, Space: 1})
+	assoc.SetRelPos(relpos.Rel{Rel: relpos.Relations(relpos.Center), Other: "Letter Output", YAlign: relpos.Front, Space: 2})
 
 	//
 	// Once you've done this. Please proceed to Section 1b (by searching this file.)
