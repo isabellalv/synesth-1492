@@ -6,6 +6,7 @@
 package main
 
 import (
+	//ADDED for train/test configuration/environment
 	"flag"
 	"fmt"
 	"log"
@@ -14,12 +15,14 @@ import (
 	"strconv"
 	"time"
 
+	//"strings" //ADDED for train/test configuration/environment
+
 	"github.com/emer/emergent/emer"
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/netview"
 	"github.com/emer/emergent/params"
 	"github.com/emer/emergent/prjn"
-	"github.com/emer/emergent/relpos" //include to get layer positioning 
+	"github.com/emer/emergent/relpos" //include to get layer positioning
 	"github.com/emer/etable/agg"
 	"github.com/emer/etable/clust"
 	"github.com/emer/etable/eplot"
@@ -123,6 +126,31 @@ var ParamSets = params.Sets{
 				}},
 		},
 	}},
+	// {Name: "Training", Desc: "training parameters", Sheets: params.Sheets{
+	// 	"Network": &params.Sheet{
+	// 		{Sel: "Layer", Desc: "Congruent",
+	// 			Params: params.Params{
+	// 				"Layer.Act.Init.Decay": "1",
+	// 				"Layer.Act.Dt.VmTau":   "3.3",
+	// 			}},
+	// 	},
+	// }},
+	// {Name: "Testing", Desc: "testing parameters", Sheets: params.Sheets{
+	// 	"Network": &params.Sheet{
+	// 		{Sel: "Layer", Desc: "Congruen, Incongruent, Control",
+	// 			Params: params.Params{
+	// 				"Layer.Act.Init.Decay": "1",
+	// 				"Layer.Act.Dt.VmTau":   "30",
+	// 			}},
+	// 	},
+	// }},
+	// {Name: "SOATesting", Desc: "SOA testing parameters", Sheets: params.Sheets{
+	// 	"Network": &params.Sheet{
+	// 		{Sel: "Layer", Desc: "no decay",
+	// 			Params: params.Params{
+	// 				"Layer.Act.Init.Decay": "0",
+	// 			}},
+	// 	},
 }
 
 // Sim encapsulates the entire simulation model, and we define all the
@@ -131,11 +159,13 @@ var ParamSets = params.Sets{
 // as arguments to methods, and provides the core GUI interface (note the view tags
 // for the fields which provide hints to how things should be displayed).
 type Sim struct {
-	HidToHid2    float32           `def:"0" desc:"Between Letter Hidden and Color Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
-	OutToAssoc   float32           `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` //ADDED
-	Out2ToAssoc  float32           `def:"0" desc:"Between Color Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  //ADDED
-	Net          *leabra.Network   `view:"no-inline" desc:"the network -- click to view / edit parameters for layers, prjns, etc"`
-	Pats         *etable.Table     `view:"no-inline" desc:"the training patterns to use"`
+	HidToHid2   float32         `def:"0" desc:"Between Letter Hidden and Color Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	OutToAssoc  float32         `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` //ADDED
+	Out2ToAssoc float32         `def:"0" desc:"Between Color Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  //ADDED
+	Net         *leabra.Network `view:"no-inline" desc:"the network -- click to view / edit parameters for layers, prjns, etc"`
+	//Pats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"`
+	TrainPats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"` //ADDED
+	TestPats     *etable.Table     `view:"no-inline" desc:"the testing patterns to use"`  //ADDED
 	TrnEpcLog    *etable.Table     `view:"no-inline" desc:"training epoch-level log data"`
 	TstEpcLog    *etable.Table     `view:"no-inline" desc:"testing epoch-level log data"`
 	TstTrlLog    *etable.Table     `view:"no-inline" desc:"testing trial-level log data"`
@@ -176,36 +206,36 @@ type Sim struct {
 	NZero      int     `inactive:"+" desc:"number of epochs in a row with zero SSE"`
 
 	// internal state - view:"-"
-	SumSSE        float64          `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	SumAvgSSE     float64          `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	SumCosDiff    float64          `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	CntErr        int              `view:"-" inactive:"+" desc:"sum of errs to increment as we go through epoch"`
-	Win           *gi.Window       `view:"-" desc:"main GUI window"`
-	NetView       *netview.NetView `view:"-" desc:"the network viewer"`
-	ToolBar       *gi.ToolBar      `view:"-" desc:"the master toolbar"`
-	TrnEpcPlot    *eplot.Plot2D    `view:"-" desc:"the training epoch plot"`
-	TstEpcPlot    *eplot.Plot2D    `view:"-" desc:"the testing epoch plot"`
-	TstTrlPlot    *eplot.Plot2D    `view:"-" desc:"the test-trial plot"`
-	TstCycPlot    *eplot.Plot2D    `view:"-" desc:"the test-cycle plot"`
-	RunPlot       *eplot.Plot2D    `view:"-" desc:"the run plot"`
-	TrnEpcFile    *os.File         `view:"-" desc:"log file"`
-	TstTrlFile    *os.File         `view:"-" desc:"log file"`
-	RunFile       *os.File         `view:"-" desc:"log file"`
-	InputValsTsr  *etensor.Float32 `view:"-" desc:"for holding layer values"`
-	OutputValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
-	HiddenValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
+	SumSSE         float64          `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	SumAvgSSE      float64          `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	SumCosDiff     float64          `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	CntErr         int              `view:"-" inactive:"+" desc:"sum of errs to increment as we go through epoch"`
+	Win            *gi.Window       `view:"-" desc:"main GUI window"`
+	NetView        *netview.NetView `view:"-" desc:"the network viewer"`
+	ToolBar        *gi.ToolBar      `view:"-" desc:"the master toolbar"`
+	TrnEpcPlot     *eplot.Plot2D    `view:"-" desc:"the training epoch plot"`
+	TstEpcPlot     *eplot.Plot2D    `view:"-" desc:"the testing epoch plot"`
+	TstTrlPlot     *eplot.Plot2D    `view:"-" desc:"the test-trial plot"`
+	TstCycPlot     *eplot.Plot2D    `view:"-" desc:"the test-cycle plot"`
+	RunPlot        *eplot.Plot2D    `view:"-" desc:"the run plot"`
+	TrnEpcFile     *os.File         `view:"-" desc:"log file"`
+	TstTrlFile     *os.File         `view:"-" desc:"log file"`
+	RunFile        *os.File         `view:"-" desc:"log file"`
+	InputValsTsr   *etensor.Float32 `view:"-" desc:"for holding layer values"`
+	OutputValsTsr  *etensor.Float32 `view:"-" desc:"for holding layer values"`
+	HiddenValsTsr  *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	Input2ValsTsr  *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	Output2ValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	Hidden2ValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
-	SaveWts       bool             `view:"-" desc:"for command-line run only, auto-save final weights after each run"`
-	NoGui         bool             `view:"-" desc:"if true, runing in no GUI mode"`
-	LogSetParams  bool             `view:"-" desc:"if true, print message for all params that are set"`
-	IsRunning     bool             `view:"-" desc:"true if sim is running"`
-	StopNow       bool             `view:"-" desc:"flag to stop running"`
-	NeedsNewRun   bool             `view:"-" desc:"flag to initialize NewRun if last one finished"`
-	RndSeed       int64            `view:"-" desc:"the current random seed"`
-	TmpVals1      []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
-	TmpVals2      []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
+	SaveWts        bool             `view:"-" desc:"for command-line run only, auto-save final weights after each run"`
+	NoGui          bool             `view:"-" desc:"if true, runing in no GUI mode"`
+	LogSetParams   bool             `view:"-" desc:"if true, print message for all params that are set"`
+	IsRunning      bool             `view:"-" desc:"true if sim is running"`
+	StopNow        bool             `view:"-" desc:"flag to stop running"`
+	NeedsNewRun    bool             `view:"-" desc:"flag to initialize NewRun if last one finished"`
+	RndSeed        int64            `view:"-" desc:"the current random seed"`
+	TmpVals1       []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
+	TmpVals2       []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
 }
 
 // this registers this Sim Type and gives it properties that e.g.,
@@ -234,7 +264,11 @@ func (ss *Sim) New() {
 	// -----------------------------------
 	ss.Defaults() //ADDED
 	ss.Net = &leabra.Network{}
-	ss.Pats = &etable.Table{}
+	ss.TrainPats = &etable.Table{}
+	ss.TestPats = &etable.Table{}
+	//ss.TestControl = &etable.Table{}
+	//ss.TestCong = &etable.Table{}
+	//ss.TestIncong = &etable.Table{}
 	ss.TrnEpcLog = &etable.Table{}
 	ss.TstEpcLog = &etable.Table{}
 	ss.TstTrlLog = &etable.Table{}
@@ -294,6 +328,7 @@ func (ss *Sim) Defaults() {
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
 	ss.OpenPats()
+	ss.OpenPats2() //added
 	ss.ConfigEnv()
 	ss.ConfigNet(ss.Net)
 	ss.ConfigTrnEpcLog(ss.TrnEpcLog)
@@ -316,18 +351,18 @@ func (ss *Sim) ConfigEnv() {
 	ss.TrainEnv.Nm = "TrainEnv"
 	ss.TrainEnv.Dsc = "training params and state"
 	ss.TrainEnv.Sequential = true
-	ss.TrainEnv.Table = etable.NewIdxView(ss.Pats)
+	ss.TrainEnv.Table = etable.NewIdxView(ss.TrainPats) //CHANGE
 	ss.TrainEnv.Validate()
 	ss.TrainEnv.Run.Max = ss.MaxRuns // note: we are not setting epoch max -- do that manually
 
 	ss.TestEnv.Nm = "TestEnv"
 	ss.TestEnv.Dsc = "testing params and state"
-	ss.TestEnv.Table = etable.NewIdxView(ss.Pats)
+	ss.TestEnv.Table = etable.NewIdxView(ss.TestPats)
 	ss.TestEnv.Sequential = true
 	ss.TestEnv.Validate()
 
 	// note: to create a train / test split of pats, do this:
-	// all := etable.NewIdxView(ss.Pats)
+	//all := etable.NewIdxView(ss.Pats)
 	// splits, _ := split.Permuted(all, []float64{.8, .2}, []string{"Train", "Test"})
 	// ss.TrainEnv.Table = splits.Splits[0]
 	// ss.TestEnv.Table = splits.Splits[1]
@@ -905,11 +940,22 @@ func (ss *Sim) SetParamsSet(setNm string, sheet string, setMsg bool) error {
 //
 // Once you've done this, replace "empty.dat" with "zeroth-order.dat" in the OpenCSV
 // call below.
+
 func (ss *Sim) OpenPats() {
-	dt := ss.Pats
+	dt := ss.TrainPats
 	dt.SetMetaData("name", "TrainPats")
 	dt.SetMetaData("desc", "Training patterns")
 	err := dt.OpenCSV("Congruent_Training.dat", etable.Tab)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (ss *Sim) OpenPats2() {
+	dt := ss.TestPats
+	dt.SetMetaData("name", "TestPats")
+	dt.SetMetaData("desc", "Testing patterns")
+	err := dt.OpenCSV("Incongruent_Training.dat", etable.Tab) //change eventually
 	if err != nil {
 		log.Println(err)
 	}
@@ -1080,22 +1126,22 @@ func (ss *Sim) ConfigTrnEpcPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 // ****************************************************************************
 func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 
-// 	// ****************************************************************************
-// 	// Step 1: Copy the data from the new layer
-// 	//
-// 	// The line below creates a local variable with the data from the input layer.
-// 	// We want to keep track of data from our new 'hid' layer. To do so, we create
-// 	// a local copy of the new hidden layer as well. This is set up here for you,
-// 	// so you can just uncomment the second line below:
-// 	//
+	// 	// ****************************************************************************
+	// 	// Step 1: Copy the data from the new layer
+	// 	//
+	// 	// The line below creates a local variable with the data from the input layer.
+	// 	// We want to keep track of data from our new 'hid' layer. To do so, we create
+	// 	// a local copy of the new hidden layer as well. This is set up here for you,
+	// 	// so you can just uncomment the second line below:
+	// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
 	inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) // ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	hid2 := ss.Net.LayerByName("Color Hidden").(*leabra.Layer) //ADDED
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	out2 := ss.Net.LayerByName("Color Output").(*leabra.Layer)
-// 	//
-// 	// ****************************************************************************
+	// 	//
+	// 	// ****************************************************************************
 
 	dt.SetMetaData("name", "TstTrlLog")
 	dt.SetMetaData("desc", "Record of testing per input pattern")
@@ -1136,26 +1182,25 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 	dt.SetFromSchema(sch, nt)
 }
 
-
 // LogTstTrl adds data from current trial to the TstTrlLog table.
 // log always contains number of testing items
 func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	epc := ss.TrainEnv.Epoch.Prv // this is triggered by increment so use previous value
 
-// 	// ****************************************************************************
-// 	// Step 3: Copy the new layers again...
-// 	//
-// 	// This is exactly like step 1, but now we're in the logging function itself
-// 	// rather than setting up the data table. Create a 'hid' copy below.
-// 	//
+	// 	// ****************************************************************************
+	// 	// Step 3: Copy the new layers again...
+	// 	//
+	// 	// This is exactly like step 1, but now we're in the logging function itself
+	// 	// rather than setting up the data table. Create a 'hid' copy below.
+	// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
 	inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) //ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	hid2 := ss.Net.LayerByName("Color Hidden").(*leabra.Layer) //ADDED
 	out2 := ss.Net.LayerByName("Color Output").(*leabra.Layer) //ADDED
-// 	//
-// 	// ****************************************************************************
+	// 	//
+	// 	// ****************************************************************************
 
 	trl := ss.TestEnv.Trial.Cur
 	row := trl
@@ -1186,8 +1231,8 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 		ss.HiddenValsTsr = &etensor.Float32{}
 		ss.OutputValsTsr = &etensor.Float32{}
 		ss.HiddenValsTsr = &etensor.Float32{}
-		ss.Input2ValsTsr = &etensor.Float32{} //added layer data for new layers 
-		ss.Hidden2ValsTsr = &etensor.Float32{} 
+		ss.Input2ValsTsr = &etensor.Float32{} //added layer data for new layers
+		ss.Hidden2ValsTsr = &etensor.Float32{}
 		ss.Output2ValsTsr = &etensor.Float32{}
 		ss.Hidden2ValsTsr = &etensor.Float32{}
 	}
@@ -1216,9 +1261,9 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	hid.UnitValsTensor(ss.HiddenValsTsr, "ActM") // Modified copy of line 1
 	dt.SetCellTensor("HidActM", row, ss.HiddenValsTsr)
 
-	hid2.UnitValsTensor(ss.Hidden2ValsTsr, "ActM") // hidden 2 minus 
+	hid2.UnitValsTensor(ss.Hidden2ValsTsr, "ActM") // hidden 2 minus
 	dt.SetCellTensor("Hid2ActM", row, ss.Hidden2ValsTsr)
-												// not sure if we should add a plus phase for hidden 2 
+	// not sure if we should add a plus phase for hidden 2
 	// From here you should go to section 1d, where we set up our plot.
 	// ****************************************************************************
 
@@ -1256,7 +1301,6 @@ func (ss *Sim) TstTrlBlank(dt *etable.Table) {
 	}
 }
 
-
 func (ss *Sim) ConfigTstTrlPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot2D {
 	plt.Params.Title = "Synesthesia Stroop Task Test Trial Plot"
 	plt.Params.XAxisCol = "Epoch"
@@ -1275,7 +1319,7 @@ func (ss *Sim) ConfigTstTrlPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 		plt.SetColParams("OutActM", false, true, 0, true, 1)
 		plt.SetColParams("OutActP", false, true, 0, true, 1)
 		plt.SetColParams("Out2ActM", false, true, 0, true, 1)
-		plt.SetColParams("Out2ActP", false, true, 0, true, 1) //may need to add more for diff layers 
+		plt.SetColParams("Out2ActP", false, true, 0, true, 1) //may need to add more for diff layers
 	}
 	return plt
 }
@@ -1590,7 +1634,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	//
 	plt := tv.AddNewTab(eplot.KiT_Plot2D, "TrnEpcPlot").(*eplot.Plot2D)
 	ss.TrnEpcPlot = ss.ConfigTrnEpcPlot(plt, ss.TrnEpcLog)
-	
+
 	plt3 := tv.AddNewTab(eplot.KiT_Plot2D, "TstTrlPlot").(*eplot.Plot2D)
 	ss.TstTrlPlot = ss.ConfigTstTrlPlot(plt3, ss.TstTrlLog)
 
