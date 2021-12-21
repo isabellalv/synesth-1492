@@ -523,35 +523,29 @@ func (ss *Sim) UpdateView(train bool) {
 // using ApplyExt method on relevant layers (see TrainTrial, TestTrial).
 // If train is true, then learning DWt or WtFmDWt calls are made.
 // Handles netview updating within scope of AlphaCycle
+
 func (ss *Sim) AlphaCyc(train bool) {
-
-	// ss.Win.PollEvents() // this can be used instead of running in a separate go routine
-
-	// **********************************
-	// Insert context-layer code snippet from the README here:
-	// **********************************
-
 	viewUpdt := ss.TrainUpdt
+	//train := false
 	if !train {
 		viewUpdt = ss.TestUpdt
 	}
-
-	// update prior weight changes at start, so any DWt values remain visible at end
-	// you might want to do this less frequently to achieve a mini-batch update
-	// in which case, move it out to the TrainTrial method where the relevant
-	// counters are being dealt with.
 	if train {
 		ss.Net.WtFmDWt()
 	}
 
+	out := ss.Net.LayerByName("Letter Output").(leabra.LeabraLayer).AsLeabra()
+	out2 := ss.Net.LayerByName("Color Output").(leabra.LeabraLayer).AsLeabra()
+	
 	ss.Net.AlphaCycInit()
 	ss.Time.AlphaCycStart()
+	overThresh := false 
 	for qtr := 0; qtr < 4; qtr++ {
-		for cyc := 0; cyc < ss.Time.CycPerQtr; cyc++ {
+		for cyc := 0; cyc < 75; cyc++ { //toggling between 75 and ss.Time.CycPerQtr
 			ss.Net.Cycle(&ss.Time)
-			if !train {
-				ss.LogTstCyc(ss.TstCycLog, ss.Time.Cycle)
-			}
+			// if !train {
+			// 	ss.LogTstCyc(ss.TstCycLog, ss.Time.Cycle)
+			// }
 			ss.Time.CycleInc()
 			if ss.ViewOn {
 				switch viewUpdt {
@@ -563,21 +557,33 @@ func (ss *Sim) AlphaCyc(train bool) {
 					}
 				}
 			}
+			outact := out.Pools[0].Inhib.Act.Max
+			outact2 := out2.Pools[0].Inhib.Act.Max
+			if outact > 0.51 {
+				overThresh = true
+			} else if outact2 > 0.51 {
+				overThresh = true
+			} else {
+				break 
+			}
 		}
+
 		ss.Net.QuarterFinal(&ss.Time)
 		ss.Time.QuarterInc()
 		if ss.ViewOn {
-			switch viewUpdt {
-			case leabra.Quarter:
+			switch { //these next 3 lines changed from stroop
+			case viewUpdt <=leabra.Quarter:
 				ss.UpdateView(train)
-			case leabra.Phase:
+			case viewUpdt == leabra.Phase:
 				if qtr >= 2 {
 					ss.UpdateView(train)
 				}
 			}
 		}
+		if overThresh {
+			break
+		}
 	}
-
 	if train {
 		ss.Net.DWt()
 	}
@@ -587,6 +593,7 @@ func (ss *Sim) AlphaCyc(train bool) {
 	if !train {
 		ss.TstCycPlot.GoUpdate() // make sure up-to-date at end
 	}
+	//ss.UpdateView(false)
 }
 
 // ApplyInputs applies input patterns from given environment.
